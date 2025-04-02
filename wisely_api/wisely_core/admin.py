@@ -48,15 +48,15 @@ class BookAdmin(admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('book', 'user', 'rating')
+    list_display = ('book', 'professional', 'rating')
     search_fields = ('book__title', 'user__username')
     list_filter = ('rating', )
 
 
 @admin.register(License)
 class LicenseAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
-    search_fields = ('name', )
+    list_display = ('license_type', )
+    search_fields = ('license_type', )
 
 
 @admin.register(ProfessionalLicense)
