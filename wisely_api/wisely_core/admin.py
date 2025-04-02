@@ -3,23 +3,9 @@ from django.contrib.auth.admin import UserAdmin
 from .models import *
 
 
-class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'is_active', 'has_openings')
-    search_fields = ('user__first_name', 'user__last_name',
-                     'user__username', 'bio')
-    list_filter = ('is_active', 'has_openings')
-
-
-class ReviewInline(admin.TabularInline):
-    model = Review
-    extra = 1
-
-
-class BookAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'year_published')
-    search_fields = ('title', 'author', 'isbn')
-    list_filter = ('categories',)
-    inlines = [ReviewInline]
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    pass
 
 
 class ProfessionalLicenseInline(admin.TabularInline):
@@ -27,18 +13,64 @@ class ProfessionalLicenseInline(admin.TabularInline):
     extra = 1
 
 
-class ProfessionalWithLicensesAdmin(admin.ModelAdmin):
+@admin.register(Professional)
+class ProfessionalAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'is_active', 'has_openings')
+    search_fields = ('user__first_name', 'user__last_name',
+                     'user__username', 'bio')
     list_filter = ('is_active', 'has_openings')
     inlines = [ProfessionalLicenseInline]
 
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
+    list_display = ('__str__', )
+    search_fields = ('user__first_name', 'user__last_name', 'user__username')
 
-admin.site.register(User, UserAdmin)
-admin.site.register(Professional, ProfessionalAdmin)
-admin.site.register(Client)
-admin.site.register(Category)
-admin.site.register(Book, BookAdmin)
-admin.site.register(Review)
-admin.site.register(License)
-admin.site.register(ProfessionalLicense)
-admin.site.register(ProfessionalSpecialty)
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+    search_fields = ('name', )
+
+
+class ReviewInline(admin.TabularInline):
+    model = Review
+    extra = 1
+
+
+@admin.register(Book)
+class BookAdmin(admin.ModelAdmin):
+    list_display = ('title', 'author', 'year_published')
+    search_fields = ('title', 'author', 'isbn')
+    list_filter = ('categories',)
+    inlines = [ReviewInline]
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('book', 'user', 'rating')
+    search_fields = ('book__title', 'user__username')
+    list_filter = ('rating', )
+
+
+@admin.register(License)
+class LicenseAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name', )
+
+
+@admin.register(ProfessionalLicense)
+class ProfessionalLicenseAdmin(admin.ModelAdmin):
+    list_display = ('professional', 'license', 'license_number',
+                    'issued_state', 'expiration_date', 'is_verified')
+    search_fields = ('professional__user__first_name', 'professional__user__last_name',
+                     'license__license_type', 'license_number', 'issued_state')
+    list_filter = ('license', 'issued_state', 'is_verified')
+
+
+@admin.register(ProfessionalSpecialty)
+class ProfessionalSpecialtyAdmin(admin.ModelAdmin):
+    list_display = ('professional', 'category', 'description')
+    search_fields = ('professional__user__first_name',
+                     'professional__user__last_name', 'category__name')
+    list_filter = ('category',)
