@@ -1,23 +1,11 @@
-from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.db import models
 
 
-class User(AbstractUser):
-    USER_TYPE_CHOICES = (
-        ('professional', 'Professional'),
-        ('client', 'Client'),
-        ('business_admin', 'Business Admin')  # for future feature of moderator
+class Clinician(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='clinician_profile'
     )
-    user_type = models.CharField(choices=USER_TYPE_CHOICES)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.username
-
-
-class Professional(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='professional_profile')
     bio = models.TextField()
     is_active = models.BooleanField(default=True)
     has_openings = models.BooleanField(default=False)
@@ -25,64 +13,12 @@ class Professional(models.Model):
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     contact_email = models.EmailField(null=True, blank=True)
     contact_phone = models.CharField(max_length=20, null=True, blank=True)
-    saved_books = models.ManyToManyField('Book', blank=True, related_name='saved_by_professionals')
+    saved_books = models.ManyToManyField(
+        'books.Book', blank=True, related_name='saved_by_clinicians'
+    )
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
-
-
-class Client(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='client_profile')
-    saved_books = models.ManyToManyField('Book', blank=True, related_name='saved_by_clients')
-
-    def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name}"
-
-
-# BOOKS
-
-
-class Category(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    
-    class Meta:
-        verbose_name_plural = "Categories"
-        
-    def __str__(self):
-        return self.name
-    
-
-class Book(models.Model):
-    title = models.CharField(max_length=255)
-    author = models.CharField(max_length=255)
-    isbn = models.CharField(max_length=20, blank=True)
-    year_published = models.IntegerField(null=True, blank=True)
-    publisher = models.CharField(max_length=255, blank=True)
-    cover_image = models.ImageField(upload_to='book_covers/', null=True, blank=True)
-    description = models.TextField(blank=True)
-    categories = models.ManyToManyField(Category, related_name='books')
-
-    def __str__(self):
-        return self.title
-
-
-class Review(models.Model):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='reviews')
-    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='reviews')
-    rating = models.IntegerField()
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ('book', 'professional')
-
-    def __str__(self):
-        return f"Review by {self.professional} for {self.book}"
-
-
-# LICENSURE
 
 
 class License(models.Model):
@@ -98,7 +34,7 @@ class License(models.Model):
         ('cadc', 'Certified Alcohol and Drug Counselor'),
     )
 
-    license_type = models.CharField(max_length=50, choices=LICENSE_TYPE_CHOICES)
+    license_type = models.CharField(max_length=50, choices=LICENSE_TYPE_CHOICES, unique=True)
 
     @property
     def requirements(self):
@@ -136,7 +72,7 @@ class License(models.Model):
         return self.get_license_type_display()
 
 
-class ProfessionalLicense(models.Model):
+class ClinicianLicense(models.Model):
     STATE_CHOICES = (
         ('AL', 'Alabama'),
         ('AK', 'Alaska'),
@@ -191,7 +127,7 @@ class ProfessionalLicense(models.Model):
         ('PR', 'Puerto Rico'),
     )
 
-    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='licenses')
+    clinician = models.ForeignKey(Clinician, on_delete=models.CASCADE, related_name='licenses')
     license = models.ForeignKey(License, on_delete=models.CASCADE)
     license_number = models.CharField(max_length=50)
     expiration_date = models.DateField(null=True, blank=True)
@@ -213,20 +149,20 @@ class ProfessionalLicense(models.Model):
     # license_number_verification_document = models.FileField(upload_to='license_number_verification_documents/', null=True, blank=True)
 
     class Meta:
-        unique_together = ('professional', 'license', 'issued_state')
+        unique_together = ('clinician', 'license', 'issued_state')
 
     def __str__(self):
-        return f"{self.license.get_license_type_display()} ({self.state}) - {self.license_number} ({self.professional})"
+        return f"{self.license.get_license_type_display()} ({self.issued_state}) - {self.license_number} ({self.clinician})"
 
 
-class ProfessionalSpecialty(models.Model):
-    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='specialties')
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+class ClinicianSpecialty(models.Model):
+    clinician = models.ForeignKey(Clinician, on_delete=models.CASCADE, related_name='specialties')
+    category = models.ForeignKey('core.Category', on_delete=models.CASCADE)
     description = models.TextField(blank=True)
 
     class Meta:
-        verbose_name_plural = "Professional Specialties"
+        verbose_name_plural = "Clinician Specialties"
+        unique_together = ('clinician', 'category')
 
     def __str__(self):
-        return f"{self.professional} - {self.category}"
-
+        return f"{self.clinician} - {self.category}"
