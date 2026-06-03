@@ -76,3 +76,14 @@ temp/
 # Mermaid
 *.mmd
 *.mermaid
+
+# Node / Next.js (frontend)
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
