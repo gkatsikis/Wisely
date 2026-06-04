@@ -1,5 +1,9 @@
-from django.urls import path  # noqa: F401
+from django.urls import path
 
-app_name = 'seekers'
+from . import views
 
-urlpatterns = []
+app_name = "seekers"
+
+urlpatterns = [
+    path("me/", views.SeekerProfileView.as_view(), name="me"),
+]

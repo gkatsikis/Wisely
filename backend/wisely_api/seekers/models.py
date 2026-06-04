@@ -13,6 +13,7 @@ class Seeker(models.Model):
     )
     birthdate = models.DateField(null=True, blank=True)
     state = models.CharField(max_length=2, choices=STATE_CHOICES, blank=True, default='')
+    profile_image = models.ImageField(upload_to='seeker_images/', null=True, blank=True)
     # Topics they gravitate toward (book genres / themes). Grows organically as they browse.
     interests = models.ManyToManyField(
         'core.Category', blank=True, related_name='interested_seekers'
