@@ -13,6 +13,47 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ['id', 'clinician', 'rating', 'content', 'created_at', 'updated_at']
 
 
+class ReviewReadSerializer(serializers.ModelSerializer):
+    """Read representation for the /api/reviews/ endpoint (includes book + clinician name)."""
+
+    clinician = serializers.SerializerMethodField()
+    book_title = serializers.CharField(source='book.title', read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ['id', 'book', 'book_title', 'clinician', 'rating', 'content',
+                  'created_at', 'updated_at']
+
+    def get_clinician(self, obj):
+        user = obj.clinician.user
+        name = f"{user.first_name} {user.last_name}".strip()
+        return {'id': obj.clinician_id, 'name': name or user.username}
+
+
+class ReviewWriteSerializer(serializers.ModelSerializer):
+    """Create/update a clinician review. The clinician is the request user (set in the view);
+    `book` is required on create and immutable afterward."""
+
+    class Meta:
+        model = Review
+        fields = ['id', 'book', 'rating', 'content', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance is not None:  # update — don't let a review move to another book
+            self.fields['book'].read_only = True
+
+    def validate(self, attrs):
+        # On create, enforce one review per (book, clinician) with a friendly message
+        # instead of a database IntegrityError.
+        if self.instance is None:
+            clinician = getattr(self.context['request'].user, 'clinician_profile', None)
+            if clinician and Review.objects.filter(book=attrs.get('book'), clinician=clinician).exists():
+                raise serializers.ValidationError("You have already reviewed this book.")
+        return attrs
+
+
 class BookListSerializer(serializers.ModelSerializer):
     cover = serializers.CharField(read_only=True)
     audience_score = serializers.IntegerField(read_only=True)  # Google aggregate (property, no query)

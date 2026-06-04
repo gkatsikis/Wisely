@@ -1,5 +1,10 @@
-from django.urls import path  # noqa: F401
+from rest_framework.routers import SimpleRouter
 
-app_name = 'clinicians'
+from .views import ClinicianViewSet
 
-urlpatterns = []
+app_name = "clinicians"
+
+router = SimpleRouter()
+router.register("", ClinicianViewSet, basename="clinician")
+
+urlpatterns = router.urls

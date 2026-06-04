@@ -23,8 +23,10 @@ urlpatterns = [
     # API
     path('api/', include('core.urls')),
     path('api/books/', include('books.urls')),
+    path('api/reviews/', include('books.review_urls')),
     path('api/clinicians/', include('clinicians.urls')),
     path('api/seekers/', include('seekers.urls')),
+    path('api/engagement/', include('engagement.urls')),
 ]
 
 if settings.DEBUG:
