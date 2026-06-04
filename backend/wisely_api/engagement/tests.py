@@ -26,6 +26,8 @@ class FollowTests(APITestCase):
     def setUpTestData(cls):
         cls.seeker = _seeker("seeker_f")
         cls.clinician = _clinician("clin_f")
+        cls.book = Book.objects.create(title="The Body Keeps the Score")
+        cls.review = Review.objects.create(book=cls.book, clinician=cls.clinician, rating=5, content="x")
 
     def test_follow(self):
         self.client.force_authenticate(self.seeker.user)
@@ -62,6 +64,26 @@ class FollowTests(APITestCase):
     def test_anonymous_cannot_follow(self):
         res = self.client.post("/api/engagement/follows/", {"followee": self.clinician.user_id}, format="json")
         self.assertIn(res.status_code, (401, 403))
+
+    def test_follow_auto_logs_event_with_attribution(self):
+        self.client.force_authenticate(self.seeker.user)
+        self.client.post(
+            "/api/engagement/follows/",
+            {"followee": self.clinician.user_id, "source_review": self.review.id},
+            format="json",
+        )
+        event = Event.objects.get(event_type="clinician_followed")
+        self.assertEqual(event.actor, self.seeker.user)
+        self.assertEqual(event.clinician, self.clinician)
+        self.assertEqual(event.source_review, self.review)  # attribution carried through
+
+    def test_unfollow_auto_logs_event(self):
+        Follow.objects.create(follower=self.seeker.user, followee=self.clinician.user)
+        self.client.force_authenticate(self.seeker.user)
+        self.client.delete(f"/api/engagement/follows/{self.clinician.user_id}/")
+        self.assertTrue(
+            Event.objects.filter(event_type="clinician_unfollowed", clinician=self.clinician).exists()
+        )
 
 
 class SavedBookTests(APITestCase):
@@ -117,6 +139,23 @@ class SavedBookTests(APITestCase):
         res = self.client.get("/api/engagement/saved-books/")
         self.assertEqual(len(res.data["results"]), 1)
         self.assertEqual(res.data["results"][0]["book_title"], "Book A")
+
+    def test_save_auto_logs_event_with_attribution(self):
+        self.client.force_authenticate(self.seeker.user)
+        self.client.post(
+            "/api/engagement/saved-books/",
+            {"book": self.book.id, "via_review": self.review.id},
+            format="json",
+        )
+        event = Event.objects.get(event_type="book_saved")
+        self.assertEqual(event.book, self.book)
+        self.assertEqual(event.source_review, self.review)  # from via_review
+
+    def test_unsave_auto_logs_event(self):
+        SavedBook.objects.create(seeker=self.seeker, book=self.book)
+        self.client.force_authenticate(self.seeker.user)
+        self.client.delete(f"/api/engagement/saved-books/{self.book.id}/")
+        self.assertTrue(Event.objects.filter(event_type="book_unsaved", book=self.book).exists())
 
 
 class EventTests(APITestCase):
