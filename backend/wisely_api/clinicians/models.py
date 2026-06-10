@@ -15,6 +15,10 @@ class Clinician(models.Model):
     )
     is_active = models.BooleanField(default=True)
     has_openings = models.BooleanField(default=False)
+    # Self-reported NPI — kept private; used for NPPES verification, never shown publicly.
+    npi = models.CharField(max_length=10, blank=True, default='', db_index=True)
+    is_verified = models.BooleanField(default=False)  # the "Verified Clinician" badge
+    verified_at = models.DateTimeField(null=True, blank=True)
     last_active = models.DateTimeField(auto_now=True)
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     contact_email = models.EmailField(null=True, blank=True)
@@ -25,6 +29,29 @@ class Clinician(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
+
+
+class ManualVerificationRequest(models.Model):
+    """Logged when a clinician can't be auto-verified (no NPI / name mismatch / inactive),
+    so it can be handled by hand now and automated (e.g. state-board lookup) later."""
+
+    REASON_CHOICES = (
+        ('no_npi', 'No NPI provided'),
+        ('npi_mismatch', 'NPI name mismatch'),
+        ('npi_inactive', 'NPI inactive'),
+        ('other', 'Other'),
+    )
+
+    clinician = models.ForeignKey(
+        'Clinician', on_delete=models.CASCADE, related_name='verification_requests'
+    )
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES, default='no_npi')
+    resolved = models.BooleanField(default=False)
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.clinician} — {self.get_reason_display()}"
 
 
 class License(models.Model):

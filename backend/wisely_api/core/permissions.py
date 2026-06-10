@@ -32,3 +32,13 @@ class IsSeeker(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return bool(user and user.is_authenticated and hasattr(user, "seeker_profile"))
+
+
+class IsClinician(permissions.BasePermission):
+    """Authenticated users who have a clinician profile (for managing their own profile)."""
+
+    message = "Only clinicians can perform this action."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and hasattr(user, "clinician_profile"))

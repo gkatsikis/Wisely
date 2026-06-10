@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/clinicians/', include('clinicians.urls')),
     path('api/seekers/', include('seekers.urls')),
     path('api/engagement/', include('engagement.urls')),
+    path('api/', include('readinglists.urls')),  # /api/reading-lists/ + /api/shared-lists/{token}/
 ]
 
 if settings.DEBUG:

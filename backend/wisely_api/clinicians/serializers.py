@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from books.models import Review
 
-from .models import Clinician, ClinicianLicense, ClinicianSpecialty
+from .models import Clinician, ClinicianLicense, ClinicianSpecialty, License
 
 
 def _display_name(user):
@@ -48,7 +48,7 @@ class ClinicianListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clinician
         fields = [
-            "id", "user_id", "name", "has_openings", "profile_image",
+            "id", "user_id", "name", "is_verified", "has_openings", "profile_image",
             "specialties", "states", "review_count",
         ]
 
@@ -78,7 +78,7 @@ class ClinicianDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clinician
         fields = [
-            "id", "user_id", "name", "bio", "video_bio_url", "has_openings", "is_active",
+            "id", "user_id", "name", "is_verified", "bio", "video_bio_url", "has_openings", "is_active",
             "profile_image", "contact_email", "contact_phone",
             "specialties", "licenses", "reviews", "follower_count",
         ]
@@ -88,3 +88,79 @@ class ClinicianDetailSerializer(serializers.ModelSerializer):
 
     def get_follower_count(self, obj):
         return obj.user.followers.count()
+
+
+class ClinicianSelfSerializer(serializers.ModelSerializer):
+    """A clinician's own editable profile. Specialties/licenses are read-only here — manage
+    them via /api/clinicians/me/specialties/ and /licenses/."""
+
+    user_id = serializers.IntegerField(read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    specialties = SpecialtySerializer(many=True, read_only=True)
+    licenses = LicenseSerializer(many=True, read_only=True)
+    follower_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Clinician
+        fields = [
+            "id", "user_id", "username", "email", "first_name", "last_name",
+            "bio", "video_bio_url", "has_openings", "is_active",
+            "contact_email", "contact_phone", "profile_image", "npi",
+            "is_verified", "verified_at",
+            "specialties", "licenses", "follower_count", "last_active",
+        ]
+        read_only_fields = ["is_active", "last_active", "is_verified", "verified_at"]
+
+    def get_follower_count(self, obj):
+        return obj.user.followers.count()
+
+
+class MySpecialtySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClinicianSpecialty
+        fields = ["id", "category", "description"]
+
+    def validate(self, attrs):
+        if self.instance is None:
+            clinician = self.context["request"].user.clinician_profile
+            if ClinicianSpecialty.objects.filter(clinician=clinician, category=attrs["category"]).exists():
+                raise serializers.ValidationError("You already have this specialty.")
+        return attrs
+
+
+class MyLicenseSerializer(serializers.ModelSerializer):
+    license_type = serializers.CharField(source="license.get_license_type_display", read_only=True)
+
+    class Meta:
+        model = ClinicianLicense
+        fields = [
+            "id", "license", "license_type", "license_number",
+            "issued_state", "issued_date", "expiration_date", "is_verified",
+        ]
+        read_only_fields = ["is_verified"]  # verification is admin-controlled
+
+    def validate(self, attrs):
+        if self.instance is None:
+            clinician = self.context["request"].user.clinician_profile
+            if ClinicianLicense.objects.filter(
+                clinician=clinician,
+                license=attrs.get("license"),
+                issued_state=attrs.get("issued_state"),
+            ).exists():
+                raise serializers.ValidationError("You already have this license for this state.")
+        return attrs
+
+
+class LicenseTypeSerializer(serializers.ModelSerializer):
+    """A license type for the 'add a license' picker."""
+
+    display = serializers.CharField(source="get_license_type_display", read_only=True)
+    description = serializers.CharField(read_only=True)   # model property
+    requirements = serializers.CharField(read_only=True)  # model property
+
+    class Meta:
+        model = License
+        fields = ["id", "license_type", "display", "description", "requirements"]

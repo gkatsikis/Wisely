@@ -7,10 +7,11 @@ from .services.affiliate import PROVIDERS, affiliate_url
 
 class ReviewSerializer(serializers.ModelSerializer):
     clinician = serializers.StringRelatedField()
+    clinician_verified = serializers.BooleanField(source='clinician.is_verified', read_only=True)
 
     class Meta:
         model = Review
-        fields = ['id', 'clinician', 'rating', 'content', 'created_at', 'updated_at']
+        fields = ['id', 'clinician', 'clinician_verified', 'rating', 'content', 'created_at', 'updated_at']
 
 
 class ReviewReadSerializer(serializers.ModelSerializer):
@@ -27,7 +28,11 @@ class ReviewReadSerializer(serializers.ModelSerializer):
     def get_clinician(self, obj):
         user = obj.clinician.user
         name = f"{user.first_name} {user.last_name}".strip()
-        return {'id': obj.clinician_id, 'name': name or user.username}
+        return {
+            'id': obj.clinician_id,
+            'name': name or user.username,
+            'is_verified': obj.clinician.is_verified,
+        }
 
 
 class ReviewWriteSerializer(serializers.ModelSerializer):

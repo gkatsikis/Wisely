@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Clinician, ClinicianLicense, ClinicianSpecialty, License
+from .models import (
+    Clinician,
+    ClinicianLicense,
+    ClinicianSpecialty,
+    License,
+    ManualVerificationRequest,
+)
 
 
 class ClinicianLicenseInline(admin.TabularInline):
@@ -10,9 +16,10 @@ class ClinicianLicenseInline(admin.TabularInline):
 
 @admin.register(Clinician)
 class ClinicianAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'is_active', 'has_openings')
-    search_fields = ('user__first_name', 'user__last_name', 'user__username', 'bio')
-    list_filter = ('is_active', 'has_openings')
+    list_display = ('__str__', 'is_verified', 'npi', 'is_active', 'has_openings')
+    search_fields = ('user__first_name', 'user__last_name', 'user__username', 'bio', 'npi')
+    list_filter = ('is_verified', 'is_active', 'has_openings')
+    readonly_fields = ('verified_at',)
     inlines = [ClinicianLicenseInline]
 
 
@@ -37,3 +44,11 @@ class ClinicianSpecialtyAdmin(admin.ModelAdmin):
     search_fields = ('clinician__user__first_name',
                      'clinician__user__last_name', 'category__name')
     list_filter = ('category',)
+
+
+@admin.register(ManualVerificationRequest)
+class ManualVerificationRequestAdmin(admin.ModelAdmin):
+    list_display = ('clinician', 'reason', 'resolved', 'created_at')
+    list_filter = ('reason', 'resolved')
+    search_fields = ('clinician__user__username', 'clinician__user__last_name')
+    date_hierarchy = 'created_at'

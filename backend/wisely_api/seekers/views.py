@@ -18,5 +18,8 @@ class SeekerProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        seeker, _ = Seeker.objects.get_or_create(user=self.request.user)
+        seeker, created = Seeker.objects.get_or_create(user=self.request.user)
+        if created and not self.request.user.user_type:
+            self.request.user.user_type = "seeker"
+            self.request.user.save(update_fields=["user_type"])
         return seeker

@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'clinicians',
     'seekers',
     'engagement',
+    'readinglists',
 ]
 
 MIDDLEWARE = [
@@ -194,6 +195,7 @@ REST_AUTH = {
     'USE_JWT': True,
     'SESSION_LOGIN': False,
     'JWT_AUTH_HTTPONLY': False,  # include the refresh token in the body (mobile can't use cookies)
+    'USER_DETAILS_SERIALIZER': 'core.serializers.WiselyUserDetailsSerializer',
 }
 
 SIMPLE_JWT = {

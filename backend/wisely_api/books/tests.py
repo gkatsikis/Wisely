@@ -189,6 +189,11 @@ class ReviewAuthoringTests(APITestCase):
         self.assertEqual(len(res.data['results']), 1)
         self.assertEqual(res.data['results'][0]['book_title'], 'The Body Keeps the Score')
 
+    def test_review_exposes_reviewer_verified_flag(self):
+        self._review()
+        res = self.client.get(f'/api/reviews/?book={self.book.id}')
+        self.assertIn('is_verified', res.data['results'][0]['clinician'])
+
 
 class BookCatalogFilterTests(APITestCase):
     @classmethod
